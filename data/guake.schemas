@@ -1,6 +1,35 @@
 <gconfschemafile>
     <schemalist>
         <schema>
+            <key>/schemas/apps/guake/general/mouse_display</key>
+            <applyto>/apps/guake/general/mouse_display</applyto>
+            <owner>guake</owner>
+            <type>bool</type>
+            <default>true</default>
+            <locale name="C">
+                <short>Appear on the mouse display.</short>
+                <long>Appear on the mouse display. This overrides any setting
+                in display_n.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/general/display_n</key>
+            <applyto>/apps/guake/general/display_n</applyto>
+            <owner>guake</owner>
+            <type>int</type>
+            <default>0</default>
+            <locale name="C">
+                <short>Display to appear on.</short>
+                <long>Display to appear on if the  mouse_display option is not set.
+                If this is set to an invalid value (as in the case of removing a
+                screen from a system), the
+                invalid value is automatically updated to the current primary
+                screen.</long>
+            </locale>
+        </schema>
+
+        <schema>
             <key>/schemas/apps/guake/general/default_shell</key>
             <applyto>/apps/guake/general/default_shell</applyto>
             <owner>guake</owner>
@@ -105,6 +134,67 @@
         </schema>
 
         <schema>
+            <key>/schemas/apps/guake/general/quick_open_enable</key>
+            <applyto>/apps/guake/general/quick_open_enable</applyto>
+            <owner>guake</owner>
+            <type>bool</type>
+            <default>false</default>
+            <locale name="C">
+                <short>Enable Quick Open feature.</short>
+                <long>If this property is set as true, guake will
+                open a text editor when the user does a Ctrl+Click
+                on a filename printed in the terminal.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/general/quick_open_command_line</key>
+            <applyto>/apps/guake/general/quick_open_command_line</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>gedit %(file_path)s</default>
+            <locale name="C">
+                <short>Command line pattern to start a editor.</short>
+                <long>This property gives the command line to execute when
+                doing a Quick Open. You can enter the following python
+                string pattern in it: '%(file_path)s' will be replaced
+                with the full path to the captured filename,
+                '%(line_number)s' will be replaced by the line number if
+                found (set to the empty string otherwise).</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/general/quick_open_in_current_terminal</key>
+            <applyto>/apps/guake/general/quick_open_in_current_terminal</applyto>
+            <owner>guake</owner>
+            <type>bool</type>
+            <default>false</default>
+            <locale name="C">
+                <short>Quick open the file in the current terminal.</short>
+                <long>If this property is set as true, guake will
+                use the current terminal to execute the Quick open
+                feature. Use if you want to inherit your terminal
+                environment in your text editor</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/general/startup_script</key>
+            <applyto>/apps/guake/general/startup_script</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default></default>
+            <locale name="C">
+                <short>Startup script to execute when guake starts</short>
+                <long>This property allows you to execute a startup bash
+                script each time guake starts. You can configure your
+                initial tab settings within this script. Please see
+                the command line argument of guake ('guake --help')
+                for complete help.</long>
+            </locale>
+        </schema>
+        <schema>
             <key>/schemas/apps/guake/general/start_fullscreen</key>
             <applyto>/apps/guake/general/start_fullscreen</applyto>
             <owner>guake</owner>
@@ -123,20 +213,33 @@
             <type>int</type>
             <default>100</default>
             <locale name="C">
-                <short>Window height.</short>
+                <short>Window width.</short>
                 <long>Percent of the screen that will be used by guake
                   terminal horizontally.</long>
             </locale>
         </schema>
 
         <schema>
-            <key>/schemas/apps/guake/general/window_height</key>
-            <applyto>/apps/guake/general/window_height</applyto>
+            <key>/schemas/apps/guake/general/window_width_f</key>
+            <applyto>/apps/guake/general/window_width_f</applyto>
             <owner>guake</owner>
-            <type>int</type>
+            <type>float</type>
+            <default>100</default>
+            <locale name="C">
+                <short>Window width (float).</short>
+                <long>Percent of the screen that will be used by guake
+                  terminal horizontally.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/general/window_height_f</key>
+            <applyto>/apps/guake/general/window_height_f</applyto>
+            <owner>guake</owner>
+            <type>float</type>
             <default>50</default>
             <locale name="C">
-                <short>Window size.</short>
+                <short>Window height (float).</short>
                 <long>Percent of the screen that will be used by guake
                   terminal vertically.</long>
             </locale>
@@ -152,6 +255,19 @@
             <short>Window horizontal alignment.</short>
             <long>Place Guake at:
                   0: center, 1: left, 2: right</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/general/window_valignment</key>
+            <applyto>/apps/guake/general/window_valignment</applyto>
+            <owner>guake</owner>
+            <type>int</type>
+            <default>0</default>
+            <locale name="C">
+            <short>Window vertical alignment.</short>
+            <long>Place Guake at:
+                  0: top, 1: bottom</long>
             </locale>
         </schema>
 
@@ -228,6 +344,30 @@
             <locale name="C">
                 <short>Use terminal titles for tab naming</short>
                 <long>Any terminal program can set the terminal's title via special escape sequences. Some shells (e.g. bash) display user's prompt there (though you can adjust that to any arbitrary text in bashrc or similar) and update it automatically as the prompt changes. So you can have easy automatically updating meaningful tab titles with this option turned on.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/style/cursor_blink_mode</key>
+            <applyto>/apps/guake/style/cursor_blink_mode</applyto>
+            <owner>guake</owner>
+            <type>int</type>
+            <default>0</default>
+            <locale name="C">
+                <short>Cursor blink mode of the terminal</short>
+                <long>Controls the blink mode of the cursor in the terminals. 0: Follow GTK+ setting, 1: Blink on, 2: Blink off</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/style/cursor_shape</key>
+            <applyto>/apps/guake/style/cursor_shape</applyto>
+            <owner>guake</owner>
+            <type>int</type>
+            <default>0</default>
+            <locale name="C">
+                <short>Cursor shape of the terminal</short>
+                <long>Controls the shape of the cursor in the terminals. 0: Block, 1: I-Beam, 2: Underline</long>
             </locale>
         </schema>
 
@@ -378,6 +518,18 @@
         </schema>
 
         <schema>
+            <key>/schemas/apps/guake/keybindings/local/search_on_web</key>
+            <applyto>/apps/guake/keybindings/local/search_on_web</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;&lt;Shift&gt;l</default>
+            <locale name="C">
+                <short>Search current selected text on the web</short>
+                <long>Accelerator to active function that search on the web the current selected text on the terminal.</long>
+            </locale>
+        </schema>
+
+        <schema>
             <key>/schemas/apps/guake/keybindings/local/previous_tab</key>
             <applyto>/apps/guake/keybindings/local/previous_tab</applyto>
             <owner>guake</owner>
@@ -402,13 +554,133 @@
         </schema>
 
         <schema>
-            <key>/schemas/apps/guake/keybindings/local/rename_tab</key>
-            <applyto>/apps/guake/keybindings/local/rename_tab</applyto>
+            <key>/schemas/apps/guake/keybindings/local/switch_tab1</key>
+            <applyto>/apps/guake/keybindings/local/switch_tab1</applyto>
             <owner>guake</owner>
             <type>string</type>
-            <default>F2</default>
+            <default>&lt;Control&gt;F1</default>
             <locale name="C">
-                <short>Rename tab.</short>
+                <short>First tab.</short>
+                <long>Switch to the first tab.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/keybindings/local/switch_tab2</key>
+            <applyto>/apps/guake/keybindings/local/switch_tab2</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;F2</default>
+            <locale name="C">
+                <short>Second tab.</short>
+                <long>Switch to the second tab.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/keybindings/local/switch_tab3</key>
+            <applyto>/apps/guake/keybindings/local/switch_tab3</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;F3</default>
+            <locale name="C">
+                <short>Third tab.</short>
+                <long>Switch to the third tab.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/keybindings/local/switch_tab4</key>
+            <applyto>/apps/guake/keybindings/local/switch_tab4</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;F4</default>
+            <locale name="C">
+                <short>Fourth tab.</short>
+                <long>Switch to the fourth tab.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/keybindings/local/switch_tab5</key>
+            <applyto>/apps/guake/keybindings/local/switch_tab5</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;F5</default>
+            <locale name="C">
+                <short>Fifth tab.</short>
+                <long>Switch to the fifth tab.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/keybindings/local/switch_tab6</key>
+            <applyto>/apps/guake/keybindings/local/switch_tab6</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;F6</default>
+            <locale name="C">
+                <short>Sixth tab.</short>
+                <long>Switch to the sixth tab.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/keybindings/local/switch_tab7</key>
+            <applyto>/apps/guake/keybindings/local/switch_tab7</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;F7</default>
+            <locale name="C">
+                <short>Seventh tab.</short>
+                <long>Switch to the seventh tab.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/keybindings/local/switch_tab8</key>
+            <applyto>/apps/guake/keybindings/local/switch_tab8</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;F8</default>
+            <locale name="C">
+                <short>eighth tab.</short>
+                <long>Switch to the eighth tab.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/keybindings/local/switch_tab9</key>
+            <applyto>/apps/guake/keybindings/local/switch_tab9</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;F9</default>
+            <locale name="C">
+                <short>Ninth tab.</short>
+                <long>Switch to the ninth tab.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/keybindings/local/switch_tab10</key>
+            <applyto>/apps/guake/keybindings/local/switch_tab10</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;F10</default>
+            <locale name="C">
+                <short>Tenth tab.</short>
+                <long>Switch to the tenth tab.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/keybindings/local/rename_current_tab</key>
+            <applyto>/apps/guake/keybindings/local/rename_current_tab</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;F2</default>
+            <locale name="C">
+                <short>Rename current tab.</short>
                 <long>Shows a dialog to rename the current tab.</long>
             </locale>
         </schema>
@@ -446,6 +718,30 @@
             <locale name="C">
                 <short>Zoom out.</short>
                 <long>Decrease the font size of the terminals.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/keybindings/local/increase_height</key>
+            <applyto>/apps/guake/keybindings/local/increase_height</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;Down</default>
+            <locale name="C">
+                <short>Increase height.</short>
+                <long>Increase the screen height.</long>
+            </locale>
+        </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/keybindings/local/decrease_height</key>
+            <applyto>/apps/guake/keybindings/local/decrease_height</applyto>
+            <owner>guake</owner>
+            <type>string</type>
+            <default>&lt;Control&gt;Up</default>
+            <locale name="C">
+                <short>Decrease height.</short>
+                <long>Decrease the screen height.</long>
             </locale>
         </schema>
 
@@ -513,7 +809,7 @@
             <default>true</default>
             <locale name="C">
                 <short>If guake must show a control to make resizing more handful</short>
-                <long>When true, guake shows a resizer on its bottom to allow user 
+                <long>When true, guake shows a resizer on its bottom to allow user
                 resize guake.</long>
             </locale>
         </schema>
@@ -529,5 +825,19 @@
                 <long>Set it as false to enjoy guake's fullscreen.</long>
             </locale>
         </schema>
+
+        <schema>
+            <key>/schemas/apps/guake/general/focus_if_open</key>
+            <applyto>/apps/guake/general/focus_if_open</applyto>
+            <owner>guake</owner>
+            <type>bool</type>
+            <default>true</default>
+            <locale name="C">
+                <short>Give focus to guake if tab is opened.</short>
+                <long>If the guake window is out of focus but open,
+                enabling this will give it back the focus instead of closing the window.</long>
+            </locale>
+        </schema>
+
     </schemalist>
 </gconfschemafile>

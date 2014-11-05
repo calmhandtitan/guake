@@ -19,21 +19,35 @@
 # Boston, MA 02110-1301 USA
 from __future__ import absolute_import
 
-import re
 import os
+import re
 import warnings
 
-import gtk
-import gobject
 import gconf
+import gobject
+import gtk
 
-from guake.simplegladeapp import SimpleGladeApp, bindtextdomain
-from guake.globals import NAME, LOCALE_DIR, GCONF_PATH, KEY, ALIGN_LEFT, ALIGN_RIGHT, ALIGN_CENTER
-from guake.common import *
+from guake.common import ShowableError
+from guake.common import _
+from guake.common import get_binaries_from_path
+from guake.common import gladefile
+from guake.common import hexify_color
+from guake.common import pixmapfile
+from guake.globals import ALIGN_CENTER
+from guake.globals import ALIGN_LEFT
+from guake.globals import ALIGN_RIGHT
+from guake.globals import ALWAYS_ON_PRIMARY
+from guake.globals import GCONF_PATH
+from guake.globals import KEY
+from guake.globals import LOCALE_DIR
+from guake.globals import NAME
+from guake.globals import QUICK_OPEN_MATCHERS
+from guake.simplegladeapp import SimpleGladeApp
+from guake.simplegladeapp import bindtextdomain
 
 # A regular expression to match possible python interpreters when
 # filling interpreters combo in preferences (including bpython and ipython)
-PYTHONS = re.compile('^[a-z]python$|^python\d\.\d$')
+PYTHONS = re.compile(r'^[a-z]python$|^python\d\.\d$')
 
 # Path to the shells file, it will be used to start to populate
 # interpreters combo, see the next variable, its important to fill the
@@ -50,8 +64,8 @@ ERASE_BINDINGS = {'ASCII DEL': 'ascii-delete',
 
 # Stuff used to build the treeview that will allow the user to change
 # keybindings in the preferences window.
-LKEY = lambda x:GCONF_PATH+'/keybindings/local/' + x
-GKEY = lambda x:GCONF_PATH+'/keybindings/global/' + x
+LKEY = lambda x: GCONF_PATH + '/keybindings/local/' + x
+GKEY = lambda x: GCONF_PATH + '/keybindings/global/' + x
 
 HOTKEYS = [
     {'label': 'General',
@@ -68,7 +82,7 @@ HOTKEYS = [
                'label': 'New tab'},
               {'key': LKEY('close_tab'),
                'label': 'Close tab'},
-              {'key': LKEY('rename_tab'),
+              {'key': LKEY('rename_current_tab'),
                'label': 'Rename current tab'},
               ]},
 
@@ -77,6 +91,26 @@ HOTKEYS = [
                'label': 'Go to previous tab'},
               {'key': LKEY('next_tab'),
                'label': 'Go to next tab'},
+              {'key': LKEY('switch_tab1'),
+               'label': 'Go to first tab'},
+              {'key': LKEY('switch_tab2'),
+               'label': 'Go to second tab'},
+              {'key': LKEY('switch_tab3'),
+               'label': 'Go to third tab'},
+              {'key': LKEY('switch_tab4'),
+               'label': 'Go to fourth tab'},
+              {'key': LKEY('switch_tab5'),
+               'label': 'Go to fifth tab'},
+              {'key': LKEY('switch_tab6'),
+               'label': 'Go to sixth tab'},
+              {'key': LKEY('switch_tab7'),
+               'label': 'Go to seventh tab'},
+              {'key': LKEY('switch_tab8'),
+               'label': 'Go to eighth tab'},
+              {'key': LKEY('switch_tab9'),
+               'label': 'Go to ninth tab'},
+              {'key': LKEY('switch_tab10'),
+               'label': 'Go to tenth tab'},
               ]},
 
     {'label': 'Appearance',
@@ -86,15 +120,25 @@ HOTKEYS = [
                'label': 'Zoom in'},
               {'key': LKEY('zoom_in_alt'),
                'label': 'Zoom in (alternative)'},
-             ]},
+              {'key': LKEY('increase_height'),
+               'label': 'Increase height'},
+              {'key': LKEY('decrease_height'),
+               'label': 'Decrease height'},
+              ]},
 
     {'label': 'Clipboard',
      'keys': [{'key': LKEY('clipboard_copy'),
                'label': 'Copy text to clipboard'},
               {'key': LKEY('clipboard_paste'),
                'label': 'Paste text from clipboard'},
-              ]}
-    ]
+              ]},
+
+    {'label': 'Extra features',
+     'keys': [
+              {'key': LKEY('search_on_web'),
+               'label': 'Search select text on web'},
+     ]},
+]
 
 PALETTES = [
     # tango
@@ -102,6 +146,12 @@ PALETTES = [
     '#757550507b7b:#060698209a9a:#d3d3d7d7cfcf:#555557575353:#efef29292929:'
     '#8a8ae2e23434:#fcfce9e94f4f:#72729f9fcfcf:#adad7f7fa8a8:#3434e2e2e2e2:'
     '#eeeeeeeeecec',
+
+    # solarized
+    '#070736364242:#DCDC32322F2F:#858599990000:#B5B589890000:#26268B8BD2D2:'
+    '#D3D336368282:#2A2AA1A19898:#EEEEE8E8D5D5:#00002B2B3636:#CBCB4B4B1616:'
+    '#58586E6E7575:#65657B7B8383:#838394949696:#6C6C7171C4C4:#9393A1A1A1A1:'
+    '#FDFDF6F6E3E3',
 
     # linux console
     '#000000000000:#aaaa00000000:#0000aaaa0000:#aaaa55550000:#00000000aaaa:'
@@ -122,7 +172,9 @@ PALETTES = [
     '#ffffffffffff'
 ]
 
+
 class PrefsCallbacks(object):
+
     """Holds callbacks that will be used in the PrefsDialg class.
     """
 
@@ -155,7 +207,6 @@ class PrefsCallbacks(object):
         """
         self.client.set_bool(KEY('/general/open_tab_cwd'), chk.get_active())
 
-
     def on_use_trayicon_toggled(self, chk):
         """Changes the activity of use_trayicon in gconf
         """
@@ -166,20 +217,31 @@ class PrefsCallbacks(object):
         """
         self.client.set_bool(KEY('/general/use_popup'), chk.get_active())
 
+    def on_prompt_on_quit_toggled(self, chk):
+        """Set the `prompt on quit' property in gconf
+        """
+        self.client.set_bool(KEY('/general/prompt_on_quit'), chk.get_active())
+
     def on_window_ontop_toggled(self, chk):
         """Changes the activity of window_ontop in gconf
         """
         self.client.set_bool(KEY('/general/window_ontop'), chk.get_active())
+
+    def on_quick_open_enable_toggled(self, chk):
+        """Changes the activity of window_ontop in gconf
+        """
+        self.client.set_bool(KEY('/general/quick_open_enable'), chk.get_active())
+
+    def on_quick_open_in_current_terminal_toggled(self, chk):
+        self.client.set_bool(KEY('/general/quick_open_in_current_terminal'), chk.get_active())
 
     def on_window_losefocus_toggled(self, chk):
         """Changes the activity of window_losefocus in gconf
         """
         self.client.set_bool(KEY('/general/window_losefocus'), chk.get_active())
 
-    def on_use_vte_titles_toggled(self, chk):
-        """Changes the activity of use_vte_titles in gconf
-        """
-        self.client.set_bool(KEY('/general/use_vte_titles'), chk.get_active())
+    def on_quick_open_command_line_changed(self, edt):
+        self.client.set_string(KEY('/general/quick_open_command_line'), edt.get_text())
 
     def on_window_tabbar_toggled(self, chk):
         """Changes the activity of window_tabbar in gconf
@@ -191,16 +253,66 @@ class PrefsCallbacks(object):
         """
         self.client.set_bool(KEY('/general/start_fullscreen'), chk.get_active())
 
+    def on_mouse_display_toggled(self, chk):
+        """Set the 'appear on mouse display' preference in gconf. This
+        property supercedes any value stored in display_n.
+        """
+        self.client.set_bool(KEY('/general/mouse_display'), chk.get_active())
+
+    def on_right_align_toggled(self, chk):
+        """set the horizontal alignment setting.
+        """
+        v = chk.get_active()
+        self.client.set_int(KEY('/general/window_halignment'), 1 if v else 0)
+
+    def on_bottom_align_toggled(self, chk):
+        """set the vertical alignment setting.
+        """
+        v = chk.get_active()
+        self.client.set_int(KEY('/general/window_valignment'), 1 if v else 0)
+
+    def on_display_n_changed(self, combo):
+        """Set the destination display in gconf.
+        """
+
+        i = combo.get_active_iter()
+        if not i:
+            return
+
+        model = combo.get_model()
+        first_item_path = model.get_path(model.get_iter_first())
+
+        if model.get_path(i) == first_item_path:
+            val_int = ALWAYS_ON_PRIMARY
+        else:
+            val = model.get_value(i, 0)
+            val_int = int(val.split()[0])  # extracts 1 from '1' or from '1 (primary)'
+        self.client.set_int(KEY('/general/display_n'), val_int)
+
     def on_window_height_value_changed(self, hscale):
         """Changes the value of window_height in gconf
         """
         val = hscale.get_value()
         self.client.set_int(KEY('/general/window_height'), int(val))
+        self.client.set_float(KEY('/general/window_height_f'), float(val))
 
-    def on_prompt_on_quit_toggled(self, chk):
-        """Set the `prompt on quit' property in gconf
+    def on_window_width_value_changed(self, wscale):
+        """Changes the value of window_width in gconf
         """
-        self.client.set_bool(KEY('/general/prompt_on_quit'), chk.get_active())
+        val = wscale.get_value()
+        self.client.set_int(KEY('/general/window_width'), int(val))
+        self.client.set_float(KEY('/general/window_width_f'), float(val))
+
+    def on_window_halign_value_changed(self, halign_button):
+        """Changes the value of window_halignment in gconf
+        """
+        if halign_button.get_active():
+            which_align = {
+                'radiobutton_align_left': ALIGN_LEFT,
+                'radiobutton_align_right': ALIGN_RIGHT,
+                'radiobutton_align_center': ALIGN_CENTER
+            }
+            self.client.set_int(KEY('/general/window_halignment'), which_align[halign_button.get_name()])
 
     # scrolling tab
 
@@ -280,8 +392,10 @@ class PrefsCallbacks(object):
 
 
 class PrefsDialog(SimpleGladeApp):
+
     """The Guake Preferences dialog.
     """
+
     def __init__(self):
         """Setup the preferences dialog interface, loading images,
         adding filters to file choosers and connecting some signals.
@@ -300,9 +414,11 @@ class PrefsDialog(SimpleGladeApp):
         # images
         ipath = pixmapfile('guake-notification.png')
         self.get_widget('image_logo').set_from_file(ipath)
+        ipath = pixmapfile('quick-open.png')
+        self.get_widget('image_quick_open').set_from_file(ipath)
 
         # the first position in tree will store the keybinding path in gconf,
-        # and the user doesn't worry with this, lest hide that =D
+        # and the user doesn't worry with this, let's hide that =D
         model = gtk.TreeStore(str, str, object, bool)
         treeview = self.get_widget('treeview-keys')
         treeview.set_model(model)
@@ -332,6 +448,7 @@ class PrefsDialog(SimpleGladeApp):
 
         self.populate_shell_combo()
         self.populate_keys_tree()
+        self.populate_display_n()
         self.load_configs()
         self.get_widget('config-window').hide()
 
@@ -384,6 +501,18 @@ class PrefsDialog(SimpleGladeApp):
         """
         self.get_widget('font_style').set_sensitive(not chk.get_active())
 
+    def toggle_display_n_sensitivity(self, chk):
+        """When the user unchecks 'on mouse display', the option to select an
+        alternate display should be enabeld.
+        """
+        self.get_widget('display_n').set_sensitive(not chk.get_active())
+
+    def toggle_quick_open_command_line_sensitivity(self, chk):
+        """When the user unchecks 'enable quick open', the command line should be disabled
+        """
+        self.get_widget('quick_open_command_line').set_sensitive(chk.get_active())
+        self.get_widget('quick_open_in_current_terminal').set_sensitive(chk.get_active())
+
     def clear_background_image(self, btn):
         """Unset the gconf variable that holds the name of the
         background image of all terminals.
@@ -406,8 +535,8 @@ class PrefsDialog(SimpleGladeApp):
         palette_index = combo.get_active()
         if palette_index == 4:
             return
-        self.client.set_string(KEY('/style/font/palette'), 
-            PALETTES[palette_index]) 
+        self.client.set_string(KEY('/style/font/palette'),
+                               PALETTES[palette_index])
         self.set_palette_colors(PALETTES[palette_index])
 
     def on_palette_color_set(self, btn):
@@ -429,7 +558,7 @@ class PrefsDialog(SimpleGladeApp):
         for i in range(len(PALETTES)):
             if palette == PALETTES[i]:
                 self.get_widget('palette_name').set_active(i)
-    
+
     def set_palette_colors(self, palette):
         """Updates the color buttons with the given palette
         """
@@ -461,10 +590,11 @@ class PrefsDialog(SimpleGladeApp):
         and Appearance tabs from gconf.
         """
         # default_shell
+
         combo = self.get_widget('default_shell')
         # get the value for defualt shell. If unset, set to USER_SHELL_VALUE.
         value = self.client.get_string(KEY('/general/default_shell')) or \
-                USER_SHELL_VALUE
+            USER_SHELL_VALUE
         for i in combo.get_model():
             if i[0] == value:
                 combo.set_active_iter(i.iter)
@@ -497,13 +627,82 @@ class PrefsDialog(SimpleGladeApp):
         value = self.client.get_bool(KEY('/general/use_vte_titles'))
         self.get_widget('use_vte_titles').set_active(value)
 
-        # tabbar
+        value = self.client.get_float(KEY('/general/window_height_f'))
+        if not value:
+            value = self.client.get_int(KEY('/general/window_height'))
+        self.get_widget('window_height').set_value(value)
+
+        value = self.client.get_float(KEY('/general/window_width_f'))
+        if not value:
+            value = self.client.get_int(KEY('/general/window_width'))
+        self.get_widget('window_width').set_value(value)
+
+        value = self.client.get_int(KEY('/general/window_halignment'))
+        which_button = {
+            ALIGN_RIGHT: 'radiobutton_align_right',
+            ALIGN_LEFT: 'radiobutton_align_left',
+            ALIGN_CENTER: 'radiobutton_align_center'
+        }
+        self.get_widget(which_button[value]).set_active(True)
+
+        value = self.client.get_bool(KEY('/general/open_tab_cwd'))
+        self.get_widget('open_tab_cwd').set_active(value)
+
+        # tab bar
         value = self.client.get_bool(KEY('/general/window_tabbar'))
         self.get_widget('window_tabbar').set_active(value)
 
         # start fullscreen
         value = self.client.get_bool(KEY('/general/start_fullscreen'))
         self.get_widget('start_fullscreen').set_active(value)
+
+        # display number / use primary display
+        combo = self.get_widget('display_n')
+        dest_screen = self.client.get_int(KEY('/general/display_n'))
+
+        value = self.client.get_bool(KEY('/general/quick_open_enable'))
+        self.get_widget('quick_open_enable').set_active(value)
+        self.get_widget('quick_open_command_line').set_sensitive(value)
+        self.get_widget('quick_open_in_current_terminal').set_sensitive(value)
+        text = gtk.TextBuffer()
+        text = self.get_widget('quick_open_supported_patterns').get_buffer()
+        for title, matcher, _useless in QUICK_OPEN_MATCHERS:
+            text.insert_at_cursor("%s: %s\n" % (title, matcher))
+        self.get_widget('quick_open_supported_patterns').set_buffer(text)
+
+        value = self.client.get_string(KEY('/general/quick_open_command_line'))
+        if value is None:
+            value = "subl %(file_path)s:%(line_number)s"
+        self.get_widget('quick_open_command_line').set_text(value)
+
+        value = self.client.get_bool(KEY('/general/quick_open_in_current_terminal'))
+        self.get_widget('quick_open_in_current_terminal').set_active(value)
+
+        # If Guake is configured to use a screen that is not currently attached,
+        # default to 'primary display' option.
+        screen = self.get_widget('config-window').get_screen()
+        n_screens = screen.get_n_monitors()
+        if dest_screen > n_screens - 1:
+            self.client.set_bool(KEY('/general/mouse_display'), False)
+            dest_screen = screen.get_primary_monitor()
+            self.client.set_int(KEY('/general/display_n'), dest_screen)
+
+        if dest_screen == ALWAYS_ON_PRIMARY:
+            first_item = combo.get_model().get_iter_first()
+            combo.set_active_iter(first_item)
+        else:
+            seen_first = False  # first item "always on primary" is special
+            for i in combo.get_model():
+                if seen_first:
+                    i_int = int(i[0].split()[0])  # extracts 1 from '1' or from '1 (primary)'
+                    if i_int == dest_screen:
+                        combo.set_active_iter(i.iter)
+                else:
+                    seen_first = True
+
+        # use display where the mouse is currently
+        value = self.client.get_bool(KEY('/general/mouse_display'))
+        self.get_widget('mouse_display').set_active(value)
 
         # scrollbar
         value = self.client.get_bool(KEY('/general/use_scrollbar'))
@@ -550,7 +749,7 @@ class PrefsDialog(SimpleGladeApp):
         value = self.client.get_string(KEY('/style/font/palette'))
         self.set_palette_name(value)
         self.set_palette_colors(value)
-    
+
         # background image
         value = self.client.get_string(KEY('/style/background/image'))
         if os.path.isfile(value or ''):
@@ -559,13 +758,16 @@ class PrefsDialog(SimpleGladeApp):
         value = self.client.get_int(KEY('/style/background/transparency'))
         self.get_widget('background_transparency').set_value(value)
 
+        value = self.client.get_int(KEY('/general/window_valignment'))
+        self.get_widget('top_align').set_active(value)
+
         # it's a separated method, to be reused.
         self.reload_erase_combos()
 
     # -- populate functions --
 
     def populate_shell_combo(self):
-        """Read the /etc/shells and looks for installed pythons to
+        """Read the /etc/shells and looks for installed shells to
         fill the default_shell combobox.
         """
         cb = self.get_widget('default_shell')
@@ -605,6 +807,22 @@ class PrefsDialog(SimpleGladeApp):
                           3, True)
         self.get_widget('treeview-keys').expand_all()
 
+    def populate_display_n(self):
+        """Get the number of displays and populate this drop-down box
+        with them all. Prepend the "always on primary" option.
+        """
+        cb = self.get_widget('display_n')
+        screen = self.get_widget('config-window').get_screen()
+
+        cb.append_text("always on primary")
+
+        for m in range(0, int(screen.get_n_monitors())):
+            if m == int(screen.get_primary_monitor()):
+                # TODO l10n
+                cb.append_text(str(m) + ' ' + '(primary)')
+            else:
+                cb.append_text(str(m))
+
     # -- key handling --
 
     def on_key_edited(self, renderer, path, keycode, mask, keyval, model):
@@ -639,7 +857,7 @@ class PrefsDialog(SimpleGladeApp):
         if ((mask == 0 and keycode != 0) and (
             (keycode >= ord('a') and keycode <= ord('z')) or
             (keycode >= ord('A') and keycode <= ord('Z')) or
-            (keycode >= ord('0') and keycode <= ord('9')))):
+                (keycode >= ord('0') and keycode <= ord('9')))):
             dialog = gtk.MessageDialog(
                 self.get_widget('config-window'),
                 gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
@@ -669,7 +887,7 @@ class PrefsDialog(SimpleGladeApp):
         giter = model.get_iter(path)
         gconf_path = model.get_value(giter, 0)
 
-        accel = self.client.get_string(gconf_path)
+        self.client.get_string(gconf_path)
         model.set_value(giter, 2, KeyEntry(0, 0))
 
         self.client.set_string(gconf_path, 'disabled')
@@ -714,7 +932,9 @@ class PrefsDialog(SimpleGladeApp):
 
         return True
 
+
 class KeyEntry(object):
+
     def __init__(self, keycode, mask):
         self.keycode = keycode
         self.mask = mask
@@ -726,6 +946,7 @@ class KeyEntry(object):
     def __eq__(self, rval):
         return self.keycode == rval.keycode and \
             self.mask == rval.mask
+
 
 def setup_standalone_signals(instance):
     """Called when prefs dialog is running in standalone mode. It

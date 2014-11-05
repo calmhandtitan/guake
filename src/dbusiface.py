@@ -18,16 +18,16 @@ Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 Boston, MA 02110-1301 USA
 """
 import dbus
-import dbus.service
 import dbus.glib
-import gtk
-import guake.common
+import dbus.service
 dbus.glib.threads_init()
 
 DBUS_PATH = '/org/guake/RemoteControl'
 DBUS_NAME = 'org.guake.RemoteControl'
 
+
 class DbusManager(dbus.service.Object):
+
     def __init__(self, guakeinstance):
         self.guake = guakeinstance
         self.bus = dbus.SessionBus()
@@ -47,6 +47,10 @@ class DbusManager(dbus.service.Object):
     def hide(self):
         self.guake.hide()
 
+    @dbus.service.method(DBUS_NAME)
+    def fullscreen(self):
+        self.guake.fullscreen()
+
     @dbus.service.method(DBUS_NAME, in_signature='s')
     def add_tab(self, directory=''):
         self.guake.add_tab(directory)
@@ -64,12 +68,24 @@ class DbusManager(dbus.service.Object):
         return len(self.guake.term_list)
 
     @dbus.service.method(DBUS_NAME, in_signature='s')
+    def set_bgcolor(self, bgcolor):
+        self.guake.set_bgcolor(bgcolor)
+
+    @dbus.service.method(DBUS_NAME, in_signature='s')
+    def set_fgcolor(self, fgcolor):
+        self.guake.set_fgcolor(fgcolor)
+
+    @dbus.service.method(DBUS_NAME, in_signature='s')
     def execute_command(self, command):
         self.guake.execute_command(command)
 
     @dbus.service.method(DBUS_NAME, in_signature='i', out_signature='s')
     def get_tab_name(self, tab_index=0):
         return self.guake.term_list[int(tab_index)].get_window_title() or ''
+
+    @dbus.service.method(DBUS_NAME, in_signature='is')
+    def rename_tab(self, tab_index, new_text):
+        self.guake.rename_tab(tab_index, new_text)
 
     @dbus.service.method(DBUS_NAME, in_signature='s')
     def rename_current_tab(self, new_text):
